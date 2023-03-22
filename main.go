@@ -23,6 +23,7 @@ type Config struct {
 	Args []string `yaml:"args"`
 }
 
+var COMMIT string = "?"; //-ldflags
 const VERSION string = "1.2.0";
 var logEverything bool = false;
 var strictMode bool = false;
@@ -51,7 +52,7 @@ func main() {
 				interval = parsedInterval;
 				break;
 			case "-v", "--version":
-				logInfo("gitwatcher v" + VERSION, true);
+				logInfo("gitwatcher v" + VERSION + ", commit " + COMMIT, true);
 				return;
 			case "-l", "--log-everything":
 				logEverything = true;
