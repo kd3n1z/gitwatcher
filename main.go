@@ -25,6 +25,7 @@ type Config struct {
 
 const VERSION string = "1.2.0";
 var logEverything bool = false;
+var strictMode bool = false;
 
 var childProcess *exec.Cmd;
 
@@ -52,6 +53,9 @@ func main() {
 				return;
 			case "-l", "--log-everything":
 				logEverything = true;
+				break;
+			case "-s", "--strict":
+				strictMode = true;
 				break;
 			default:
 				logError(args[i] + ": invalid option");
@@ -82,13 +86,19 @@ func main() {
     }
 
 	logInfo("gitwatcher v" + VERSION + ", " + trim(out.String()) + "\n\t- pull interval: " + strconv.FormatUint(interval, 10) + " (seconds)\n\t- platform: " + runtime.GOOS + " (" + shell + " " + strings.Join(shellArgs, " ")  + ")", true);
-	logInfo("\t- loglevel: everything", false);
+	if strictMode {
+		logInfo("\t- strict mode: enabled", true);
+	}
+	logInfo("\t- log level: everything", false);
 
 	c := make(chan os.Signal);
     signal.Notify(c, os.Interrupt, syscall.SIGTERM);
     go func() {
         <-c
 		logInfo("cleaning up...", false);
+		if childProcess != nil {
+			killProcessGroup(childProcess.Process.Pid);
+		}
         os.Exit(1);
     }();
 
@@ -108,11 +118,10 @@ func main() {
 		var outStr string = strings.ToLower(trim(out.String()) + trim(stdErr.String()));
 		
 		if err != nil {
-			logWarning(err.Error() + ", '" + outStr + "'");
+			strictError(err.Error() + ", '" + outStr + "'");
 		}
 		if strings.HasPrefix(outStr, "fatal:") || strings.HasPrefix(outStr, "error:") {
-			logError("'" + outStr + "'");
-			return;
+			strictError("'" + outStr + "'");
 		}
 		logInfo("\t'" + outStr + "'", false);
 
@@ -141,12 +150,17 @@ func main() {
 	
 				logInfo("\tparsing...", false);
 	
-				cfg := Config{Shell: shell, Args: shellArgs};
+				cfg := Config{Shell: shell};
+				cfg.Args = make([]string, len(shellArgs));
+				for i, value := range shellArgs {
+					cfg.Args[i] = value;
+				}
 				err = yaml.Unmarshal(data, &cfg);
+				
+				logInfo(cfg.Cmd + "\n[" + strings.Join(cfg.Args, ",") + "]", true);
 	
 				if(err != nil) {
-					logError("'" + err.Error() + "'");
-					return;
+					strictError("parse error: '" + err.Error() + "'");
 				}
 
 				for i := 0; i < len(cfg.Args); i++ {
@@ -161,10 +175,10 @@ func main() {
 				err = childProcess.Start();
 	
 				if(err != nil) {
-					logWarning("failed to start: '" + err.Error() + "'");
+					strictError("failed to start: '" + err.Error() + "'");
 				}
 			}else{
-				logInfo("\tconfig.yml not found :(", true);
+				strictError("config.yml not found");
 			}
 		}
 
@@ -176,8 +190,11 @@ func main() {
 func killProcessGroup(id int) {
 	err := syscall.Kill(-id, syscall.SIGKILL);
 
+	logInfo("killing process " + strconv.FormatInt(int64(id), 10) + "...", false);
 	if err != nil {
-		logWarning("failed to kill process " + strconv.FormatInt(int64(id), 10));
+		logWarning("failed to kill process " + strconv.FormatInt(int64(id), 10) + ":\n\t" + err.Error());
+	}else{
+		logInfo("\tdone", false);
 	}
 }
 
@@ -197,4 +214,13 @@ func logError(str string) {
 
 func logWarning(str string) {
 	fmt.Println(color.YellowString("warning: ") + str);
+}
+
+func strictError(str string) {
+	if strictMode {
+		logError(str);
+		os.Exit(1);
+	}else{
+		logWarning(str);
+	}
 }
