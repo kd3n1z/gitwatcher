@@ -133,6 +133,9 @@ func main() {
 	if strictMode {
 		logInfo("\t- strict mode: enabled", true);
 	}
+	if hideStdout {
+		logInfo("\t- child's stdout: hidden", true);
+	}
 	logInfo("\t- log level: everything", false);
 
 	c := make(chan os.Signal);
