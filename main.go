@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path/filepath"
 	"runtime"
 	"strconv"
@@ -18,6 +19,8 @@ import (
 
 type Config struct {
 	Cmd string `yaml:"cmd"`
+	Shell string `yaml:"shell"`
+	Args []string `yaml:"args"`
 }
 
 const VERSION string = "1.2.0";
@@ -55,8 +58,14 @@ func main() {
 				return;
 		}
 	}
+	
+	var shellArgs []string = []string{"-c", "$cmd"};
+	var shell string = "sh";
 
-	if runtime.GOOS != "linux" && runtime.GOOS != "windows" && runtime.GOOS != "darwin" {
+	if runtime.GOOS == "windows" {
+		shellArgs = []string{"/C$cmd"};
+		shell = "cmd";
+	} else if runtime.GOOS != "linux" && runtime.GOOS != "darwin" {
 		logWarning("gitwatcher has not been tested on " + runtime.GOOS + ", use at your own risk");
 	}
 
@@ -72,8 +81,16 @@ func main() {
 		return;
     }
 
-	logInfo("gitwatcher v" + VERSION + ", " + trim(out.String()) + "\n\t- pull interval: " + strconv.FormatUint(interval, 10) + " (seconds)\n\t- platform: " + runtime.GOOS, true);
+	logInfo("gitwatcher v" + VERSION + ", " + trim(out.String()) + "\n\t- pull interval: " + strconv.FormatUint(interval, 10) + " (seconds)\n\t- platform: " + runtime.GOOS + " (" + shell + " " + strings.Join(shellArgs, " ")  + ")", true);
 	logInfo("\t- loglevel: everything", false);
+
+	c := make(chan os.Signal);
+    signal.Notify(c, os.Interrupt, syscall.SIGTERM);
+    go func() {
+        <-c
+		logInfo("cleaning up...", false);
+        os.Exit(1);
+    }();
 
 	var firstCheck bool = true;
 
@@ -91,8 +108,7 @@ func main() {
 		var outStr string = strings.ToLower(trim(out.String()) + trim(stdErr.String()));
 		
 		if err != nil {
-			logError(err.Error() + ", '" + outStr + "'");
-			return;
+			logWarning(err.Error() + ", '" + outStr + "'");
 		}
 		if strings.HasPrefix(outStr, "fatal:") || strings.HasPrefix(outStr, "error:") {
 			logError("'" + outStr + "'");
@@ -125,18 +141,22 @@ func main() {
 	
 				logInfo("\tparsing...", false);
 	
-				cfg := Config{};
+				cfg := Config{Shell: shell, Args: shellArgs};
 				err = yaml.Unmarshal(data, &cfg);
 	
 				if(err != nil) {
 					logError("'" + err.Error() + "'");
 					return;
 				}
-				
-				logInfo("\trunning ", false);
 
-				childProcess = exec.Command("bash", "-c", cfg.Cmd);
-				childProcess.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+				for i := 0; i < len(cfg.Args); i++ {
+					cfg.Args[i] = strings.ReplaceAll(cfg.Args[i], "$cmd", cfg.Cmd);
+				}
+				
+				logInfo("\trunning '" + cfg.Shell + " " + strings.Join(cfg.Args, " ") + "'", false);
+
+				childProcess = exec.Command(cfg.Shell, cfg.Args...);
+				childProcess.SysProcAttr = &syscall.SysProcAttr{Setpgid: true};
 
 				err = childProcess.Start();
 	
