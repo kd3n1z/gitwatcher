@@ -33,9 +33,10 @@ type githubResp struct {
 }
 
 var COMMIT string = "?"; //-ldflags
-const VERSION string = "1.2.0";
+const VERSION string = "1.2.1";
 var logEverything bool = false;
 var strictMode bool = false;
+var hideStdout bool = false;
 
 var childProcess *exec.Cmd;
 
@@ -63,7 +64,7 @@ func main() {
 				interval = parsedInterval;
 				break;
 			case "-h", "--help":
-				logInfo("gitwatcher v" + VERSION + "\n\nUsage: gitwatcher [options]\n\t-i --interval <seconds>\tSpecify pull interval.\n\t-l --log-everything\tLog each action.\n\t-h --help\t\tPrint usage.\n\t-v --version\t\tPrint current version.\n\t-s --strict-mode\tEnable strict mode.\n\t-u --check-for-updates\tCheck for newer versions on github.\n\t--init\t\t\tInitializes .gitwatcher/config.yml.", true);
+				logInfo("gitwatcher v" + VERSION + "\n\nUsage: gitwatcher [options]\n\t-i --interval <seconds>\tSpecify pull interval.\n\t-l --log-everything\tLog each action.\n\t-h --help\t\tPrint usage.\n\t-v --version\t\tPrint current version.\n\t-s --strict-mode\tEnable strict mode.\n\t-u --check-for-updates\tCheck for newer versions on github.\n\t-d --hide-stdout\tHides child process's stdout.\n\t--init\t\t\tInitializes .gitwatcher/config.yml.", true);
 				return;
 			case "-v", "--version":
 				logInfo("gitwatcher v" + VERSION + ", commit " + COMMIT, true);
@@ -97,6 +98,9 @@ func main() {
 					logInfo("created " + configOsPath, true);
 				}
 				return;
+			case "-d", "--hide-stdout":
+				hideStdout = true;
+				break;
 			default:
 				logError(args[i] + ": invalid option");
 				return;
@@ -208,6 +212,11 @@ func main() {
 				logInfo("\texecuting '" + cfg.Shell + " " + strings.Join(cfg.Args, " ") + "'", false);
 
 				childProcess = exec.Command(cfg.Shell, cfg.Args...);
+
+				if !hideStdout {
+					childProcess.Stdout = os.Stdout;
+					childProcess.Stderr = os.Stderr;
+				}
 				
 				configProcess();
 
