@@ -1,5 +1,5 @@
 zipArgs=-9
-goArgs=-ldflags="-X main.COMMIT=$$(git rev-parse HEAD)"
+goArgs=-ldflags="-s -w -X main.COMMIT=$$(git rev-parse HEAD)"
 
 all: build
 
