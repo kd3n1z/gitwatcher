@@ -105,7 +105,7 @@ func main() {
 	var firstCheck bool = true;
 
 	for {
-		logInfo("running 'git pull'...", false);
+		logInfo("executing 'git pull'...", false);
 		cmd := exec.Command("git", "pull");
 
 		var out bytes.Buffer;
@@ -167,7 +167,7 @@ func main() {
 					cfg.Args[i] = strings.ReplaceAll(cfg.Args[i], "$cmd", cfg.Cmd);
 				}
 				
-				logInfo("\trunning '" + cfg.Shell + " " + strings.Join(cfg.Args, " ") + "'", false);
+				logInfo("\texecuting '" + cfg.Shell + " " + strings.Join(cfg.Args, " ") + "'", false);
 
 				childProcess = exec.Command(cfg.Shell, cfg.Args...);
 				childProcess.SysProcAttr = &syscall.SysProcAttr{Setpgid: true};
