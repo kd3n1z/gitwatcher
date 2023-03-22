@@ -91,7 +91,7 @@ func main() {
 
 	if runtime.GOOS == "windows" {
 		shellArgs = []string{"/C$cmd"};
-		shell = "cmd";
+		shell = "cmd.exe";
 	} else if runtime.GOOS != "linux" && runtime.GOOS != "darwin" {
 		logWarning("gitwatcher has not been tested on " + runtime.GOOS + ", use at your own risk");
 	}
