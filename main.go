@@ -2,7 +2,10 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -14,6 +17,7 @@ import (
 	"time"
 
 	"github.com/fatih/color"
+	"github.com/hashicorp/go-version"
 	"gopkg.in/yaml.v3"
 )
 
@@ -21,6 +25,11 @@ type Config struct {
 	Cmd string `yaml:"cmd"`
 	Shell string `yaml:"shell"`
 	Args []string `yaml:"args"`
+}
+
+type githubResp struct {
+    TagName string `json:"tag_name"`
+    HtmlUrl string `json:"html_url"`
 }
 
 var COMMIT string = "?"; //-ldflags
@@ -32,6 +41,8 @@ var childProcess *exec.Cmd;
 
 
 // this is my first program written in go, so it may be unstable, so better use --strict-mode
+
+// TODO: webhook-mode
 func main() {
 	var configOsPath string = filepath.Join(".gitwatcher", "config-" + runtime.GOOS + ".yml");
 	var configPath string = filepath.Join(".gitwatcher", "config.yml");
@@ -41,7 +52,7 @@ func main() {
 	var args[] string = os.Args[1:];
 
 	for i := 0; i < len(args); i++ {
-		switch args[i] { //todo: help, checkForUpdates, webhook-mode
+		switch args[i] {
 			case "-i", "--interval":
 				i += 1;
 				parsedInterval, err := strconv.ParseUint(args[i], 10, 64);
@@ -51,6 +62,9 @@ func main() {
 				}
 				interval = parsedInterval;
 				break;
+			case "-h", "--help":
+				logInfo("gitwatcher v" + VERSION + "\n\nUsage: gitwatcher [options]\n\t-i --interval <seconds>\tSpecify pull interval.\n\t-l --log-everything\tLog each action.\n\t-h --help\t\tPrint usage.\n\t-v --version\t\tPrint current version.\n\t-s --strict-mode\tEnable strict mode.\n\t-u --check-for-updates\tCheck for newer versions on github.\n\t--init\t\t\tInitializes .gitwatcher/config.yml.", true);
+				return;
 			case "-v", "--version":
 				logInfo("gitwatcher v" + VERSION + ", commit " + COMMIT, true);
 				return;
@@ -60,6 +74,9 @@ func main() {
 			case "-s", "--strict-mode":
 				strictMode = true;
 				break;
+			case "-u", "--check-for-updates":
+				checkForUpdates();
+				return;
 			case "--init":
 				if _, err := os.Stat(".gitwatcher"); err != nil {
 					os.Mkdir(".gitwatcher", os.ModePerm);
@@ -207,6 +224,42 @@ func main() {
 		firstCheck = false;
 		time.Sleep(time.Duration(interval) * time.Second);
 	}
+}
+
+func checkForUpdates() {
+	resp, err := http.Get("https://api.github.com/repos/KD3n1z/gitwatcher/releases/latest");
+
+	if(err != nil) {
+		logError(err.Error());
+		return;
+	}
+
+	body, err := io.ReadAll(resp.Body);
+	
+	if(err != nil) {
+		logError(err.Error());
+		return;
+	}
+
+	parsedResp := githubResp{};
+
+	err = json.Unmarshal(body, &parsedResp);
+	
+	if(err != nil) {
+		logError("parse error: '" + err.Error() + "'");
+		return;
+	}
+
+	localV, _ := version.NewVersion(VERSION);
+	remoteV, _ := version.NewVersion(parsedResp.TagName);
+
+	if localV.LessThan(remoteV) {
+		logInfo("Update available!\n\tv" + VERSION + " -> " + parsedResp.TagName + "\n\n" + parsedResp.HtmlUrl, true);
+	}else{
+		logInfo("You're using the latest version.", true);
+	}
+
+	resp.Body.Close();
 }
 
 func trim(str string)(string) {
