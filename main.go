@@ -275,7 +275,7 @@ func checkForUpdates(selfUpdate bool) {
 	localV, _ := version.NewVersion(VERSION);
 	remoteV, _ := version.NewVersion(parsedResp.TagName);
 
-	if localV.LessThan(remoteV) || true {
+	if localV.LessThan(remoteV) {
 		if selfUpdate {
 			logInfo("Updating...", true);
 
