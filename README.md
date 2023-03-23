@@ -18,8 +18,11 @@ Options:
 - <code>-s --strict-mode</code>
     - Enable strict mode.
     - _Strict mode is basically "terminate, if you can". For example, if there was an error when executing "git pull", in strict mode the program will terminate, in default mode it will continue to work._
-- <code>-u --check-for-updates</code>
+- <code>--check-for-updates</code>
     - Check for newer versions on github.
+- <code>--update</code>
+    - Update to a newer version.
+    - _Only for Unix-like systems._
 - <code>--init</code>
     - Initializes .gitwatcher/config.yml.
         

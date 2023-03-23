@@ -1,6 +1,7 @@
 package main
 
 import (
+	"archive/zip"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -68,7 +69,7 @@ func main() {
 				interval = parsedInterval;
 				break;
 			case "-h", "--help":
-				logInfo("gitwatcher v" + VERSION + "\n\nUsage: gitwatcher [options]\n\t-i --interval <seconds>\tSpecify pull interval.\n\t-l --log-everything\tLog each action.\n\t-h --help\t\tPrint usage.\n\t-v --version\t\tPrint current version.\n\t-s --strict-mode\tEnable strict mode.\n\t-u --check-for-updates\tCheck for newer versions on github.\n\t-d --hide-stdout\tHides child process's stdout.\n\t--init\t\t\tInitializes .gitwatcher/config.yml.", true);
+				logInfo("gitwatcher v" + VERSION + "\n\nUsage: gitwatcher [options]\n\t-i --interval <seconds>\tSpecify pull interval.\n\t-l --log-everything\tLog each action.\n\t-h --help\t\tPrint usage.\n\t-v --version\t\tPrint current version.\n\t-s --strict-mode\tEnable strict mode.\n\t-d --hide-stdout\tHides child process's stdout.\n\t--check-for-updates\tCheck for newer versions on github.\n\t--update\t\tUpdate to a newer version.\n\t--init\t\t\tInitializes .gitwatcher/config.yml.", true);
 				return;
 			case "-v", "--version":
 				logInfo("gitwatcher v" + VERSION + ", commit " + COMMIT, true);
@@ -274,7 +275,7 @@ func checkForUpdates(selfUpdate bool) {
 	localV, _ := version.NewVersion(VERSION);
 	remoteV, _ := version.NewVersion(parsedResp.TagName);
 
-	if localV.LessThan(remoteV) {
+	if localV.LessThan(remoteV) || true {
 		if selfUpdate {
 			logInfo("Updating...", true);
 
@@ -307,8 +308,97 @@ func checkForUpdates(selfUpdate bool) {
 				return;
 			}
 
-			logInfo(updateUrl, true);
+			logInfo("\tcreating temp file...", true);
 
+			file, err := os.CreateTemp("", "gwr-update");
+
+			path := file.Name();
+
+			logInfo("\t\t" + path, true);
+
+			if err != nil {
+				logError(err.Error());
+				return;
+			}
+
+			logInfo("\tdownloading '" + updateUrl + "'...", true);
+
+			downloadResp, err := http.Get(updateUrl);
+
+			if err != nil {
+				logError(err.Error());
+				return;
+			}
+
+			_, err = io.Copy(file, downloadResp.Body);
+
+			if err != nil {
+				logError(err.Error());
+				return;
+			}
+
+			file.Close();
+			downloadResp.Body.Close();
+
+			reader, err := zip.OpenReader(path);
+
+			if err != nil {
+				logError(err.Error());
+				return;
+			}
+
+			logInfo("\tunzipping...", true);
+			for _, f := range reader.File {
+				if f.Name == "gitwatcher" {
+					cPath, err := os.Executable();
+
+					if err != nil {
+						logError(err.Error());
+						return;
+					}
+
+					logInfo("\t\topening '" + cPath + "'...", true);
+					executable, err := os.OpenFile(cPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, f.Mode());
+
+					if err != nil {
+						logError(err.Error());
+						return;
+					}
+
+					logInfo("\t\tdecompressing...", true);
+
+					zippedFile, err := f.Open();
+
+					if err != nil {
+						logError(err.Error());
+						return;
+					}
+
+					_, err = io.Copy(executable, zippedFile);
+
+					if err != nil {
+						logError(err.Error());
+						return;
+					}
+
+					zippedFile.Close();
+					executable.Close();
+
+					break;
+				}
+			}
+
+			reader.Close();
+
+			logInfo("\t\tcleaning up...", true);
+
+			err = os.Remove(path);
+
+			if err != nil {
+				logError(err.Error());
+			}
+
+			logInfo("\tdone, try gitwatcher --version", true);
 		}else{
 			logInfo("Update available!\n\tv" + VERSION + " -> " + parsedResp.TagName + "\n\n" + parsedResp.HtmlUrl, true);
 		}
