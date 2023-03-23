@@ -27,9 +27,13 @@ type Config struct {
 	Args []string `yaml:"args"`
 }
 
-type githubResp struct {
+type GithubResp struct {
     TagName string `json:"tag_name"`
     HtmlUrl string `json:"html_url"`
+	Assets []struct {
+		DownloadUrl string `json:"browser_download_url"`
+		Name string `json:"name"`
+	} `json:"assets"`
 }
 
 var COMMIT string = "?"; //-ldflags
@@ -75,8 +79,11 @@ func main() {
 			case "-s", "--strict-mode":
 				strictMode = true;
 				break;
-			case "-u", "--check-for-updates":
-				checkForUpdates();
+			case "--check-for-updates":
+				checkForUpdates(false);
+				return;
+			case "--update":
+				checkForUpdates(true);
 				return;
 			case "--init":
 				if _, err := os.Stat(".gitwatcher"); err != nil {
@@ -238,7 +245,7 @@ func main() {
 	}
 }
 
-func checkForUpdates() {
+func checkForUpdates(selfUpdate bool) {
 	resp, err := http.Get("https://api.github.com/repos/KD3n1z/gitwatcher/releases/latest");
 
 	if(err != nil) {
@@ -253,9 +260,11 @@ func checkForUpdates() {
 		return;
 	}
 
-	parsedResp := githubResp{};
+	parsedResp := GithubResp{};
 
 	err = json.Unmarshal(body, &parsedResp);
+
+	resp.Body.Close();
 	
 	if(err != nil) {
 		logError("parse error: '" + err.Error() + "'");
@@ -266,12 +275,46 @@ func checkForUpdates() {
 	remoteV, _ := version.NewVersion(parsedResp.TagName);
 
 	if localV.LessThan(remoteV) {
-		logInfo("Update available!\n\tv" + VERSION + " -> " + parsedResp.TagName + "\n\n" + parsedResp.HtmlUrl, true);
+		if selfUpdate {
+			logInfo("Updating...", true);
+
+			if runtime.GOOS == "windows" {
+				logError("not supported on windows");
+				return;
+			}
+
+			var updateUrl string = "";
+
+			var cOS = runtime.GOOS;
+			var cArch = runtime.GOARCH;
+			if cOS == "darwin" {
+				cOS = "macos";
+			}
+			if cArch == "amd64" {
+				cArch = "x64";
+			}
+
+			for _, asset := range parsedResp.Assets {
+				var fName string = strings.ToLower(asset.Name);
+				if fName == cOS + ".zip" || fName == cOS + "-" + cArch + ".zip" {
+					updateUrl = asset.DownloadUrl;
+					break;
+				}
+			}
+
+			if(updateUrl == "") {
+				logError("asset " + cOS + "-" + cArch + ".zip not found");
+				return;
+			}
+
+			logInfo(updateUrl, true);
+
+		}else{
+			logInfo("Update available!\n\tv" + VERSION + " -> " + parsedResp.TagName + "\n\n" + parsedResp.HtmlUrl, true);
+		}
 	}else{
 		logInfo("You're using the latest version.", true);
 	}
-
-	resp.Body.Close();
 }
 
 func trim(str string)(string) {
