@@ -37,8 +37,10 @@ type GithubResp struct {
 	} `json:"assets"`
 }
 
+var BRANCH string = "?"; //-ldflags
 var COMMIT string = "?"; //-ldflags
-const VERSION string = "1.2.1";
+
+const VERSION string = "1.2.2";
 var logEverything bool = false;
 var strictMode bool = false;
 var hideStdout bool = false;
@@ -46,7 +48,7 @@ var hideStdout bool = false;
 var childProcess *exec.Cmd;
 
 
-// this is my first program written in go, so it may be unstable, so better use --strict-mode
+// This is my first program written in go, so it may be unstable. Better use --strict-mode
 
 // TODO: webhook-mode
 func main() {
@@ -72,7 +74,7 @@ func main() {
 				logInfo("gitwatcher v" + VERSION + "\n\nUsage: gitwatcher [options]\n\t-i --interval <seconds>\tSpecify pull interval.\n\t-l --log-everything\tLog each action.\n\t-h --help\t\tPrint usage.\n\t-v --version\t\tPrint current version.\n\t-s --strict-mode\tEnable strict mode.\n\t-d --hide-stdout\tHides child process's stdout.\n\t--check-for-updates\tCheck for newer versions on github.\n\t--update\t\tUpdate to a newer version.\n\t--init\t\t\tInitializes .gitwatcher/config.yml.", true);
 				return;
 			case "-v", "--version":
-				logInfo("gitwatcher v" + VERSION + ", commit " + COMMIT, true);
+				logInfo("gitwatcher v" + VERSION + ", " + BRANCH + "/" + COMMIT, true);
 				return;
 			case "-l", "--log-everything":
 				logEverything = true;
