@@ -22,7 +22,14 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-type Config struct {
+type GitwatcherConfig struct {
+	LogEverything bool `yaml:"log-everything"`
+	StrictMode bool `yaml:"strict-mode"`
+	HideStdout bool `yaml:"hide-stdout"`
+	Interval uint64 `yaml:"interval"`
+}
+
+type RepoConfig struct {
 	Cmd string `yaml:"cmd"`
 	Shell string `yaml:"shell"`
 	Args []string `yaml:"args"`
@@ -41,21 +48,37 @@ var BRANCH string = "?"; //-ldflags
 var COMMIT string = "?"; //-ldflags
 
 const VERSION string = "1.2.2";
-var logEverything bool = false;
-var strictMode bool = false;
-var hideStdout bool = false;
 
 var childProcess *exec.Cmd;
 
+var gwConfig GitwatcherConfig = GitwatcherConfig{Interval: 60, LogEverything: false, StrictMode: false, HideStdout: false};
 
 // This is my first program written in go, so it may be unstable. Better use --strict-mode
 
 // TODO: webhook-mode
 func main() {
+	cfgPath, err := os.UserConfigDir();
+
+	if err == nil {
+		os.MkdirAll(cfgPath, os.ModePerm);
+		cfgPath = filepath.Join(cfgPath, "gitwatcher.yaml");
+
+		if _, err := os.Stat(cfgPath); err == nil {
+			data, err := os.ReadFile(cfgPath);		
+			if err == nil {
+				err = yaml.Unmarshal(data, &gwConfig);
+	
+				if err != nil {
+					logWarning("config parse error: '" + err.Error() + "'");
+				}
+			}else{
+				logWarning("config read error: '" + err.Error() + "'");
+			}
+		}
+	}
+
 	var configOsPath string = filepath.Join(".gitwatcher", "config-" + runtime.GOOS + ".yml");
 	var configPath string = filepath.Join(".gitwatcher", "config.yml");
-
-	var interval uint64 = 60;
 
 	var args[] string = os.Args[1:];
 
@@ -68,25 +91,40 @@ func main() {
 					logError(args[i] + ": invalid interval");
 					return;
 				}
-				interval = parsedInterval;
+				gwConfig.Interval = parsedInterval;
 				break;
 			case "-h", "--help":
-				logInfo("gitwatcher v" + VERSION + "\n\nUsage: gitwatcher [options]\n\t-i --interval <seconds>\tSpecify pull interval.\n\t-l --log-everything\tLog each action.\n\t-h --help\t\tPrint usage.\n\t-v --version\t\tPrint current version.\n\t-s --strict-mode\tEnable strict mode.\n\t-d --hide-stdout\tHides child process's stdout.\n\t--check-for-updates\tCheck for newer versions on github.\n\t--update\t\tUpdate to a newer version.\n\t--init\t\t\tInitializes .gitwatcher/config.yml.", true);
+				logInfo("gitwatcher v" + VERSION + "\n\nUsage: gitwatcher [options]\n\t-i --interval <seconds>\t\t Specify pull interval.\n\t-d --hide-stdout <true/false>\t Hides child process's stdout.\n\t-s --strict-mode <true/false>\t Enable strict mode.\n\t-l --log-everything <true/false> Log each action.\n\t-h --help\t\t\t Print usage.\n\t-v --version\t\t\t Print current version.\n\t--config-path\t\t\t Print config path.\n\t--check-for-updates\t\t Check for newer versions on github.\n\t--update\t\t\t Update to a newer version.\n\t--init\t\t\t\t Initialize .gitwatcher/config.yml.", true);
 				return;
 			case "-v", "--version":
 				logInfo("gitwatcher v" + VERSION + ", " + BRANCH + "/" + COMMIT, true);
 				return;
 			case "-l", "--log-everything":
-				logEverything = true;
+				if i + 1 < len(args) && (args[i + 1] == "true" || args[i + 1] == "false") {
+					i += 1;
+					gwConfig.LogEverything = args[i] == "true";
+				}else{
+					gwConfig.LogEverything = true
+					logWarning(args[i] + ": better use '" + args[i] + " true'");;
+				}
 				break;
 			case "-s", "--strict-mode":
-				strictMode = true;
+				if i + 1 < len(args) && (args[i + 1] == "true" || args[i + 1] == "false") {
+					i += 1;
+					gwConfig.StrictMode = args[i] == "true";
+				}else{
+					gwConfig.StrictMode = true;
+					logWarning(args[i] + ": better use '" + args[i] + " true'");
+				}
 				break;
 			case "--check-for-updates":
 				checkForUpdates(false);
 				return;
 			case "--update":
 				checkForUpdates(true);
+				return;
+			case "--config-path":
+				logInfo(cfgPath, true);
 				return;
 			case "--init":
 				if _, err := os.Stat(".gitwatcher"); err != nil {
@@ -109,7 +147,13 @@ func main() {
 				}
 				return;
 			case "-d", "--hide-stdout":
-				hideStdout = true;
+				if i + 1 < len(args) && (args[i + 1] == "true" || args[i + 1] == "false") {
+					i += 1;
+					gwConfig.HideStdout = args[i] == "true";
+				}else{
+					gwConfig.HideStdout = true;
+					logWarning(args[i] + ": better use '" + args[i] + " true'");
+				}
 				break;
 			default:
 				logError(args[i] + ": invalid option");
@@ -132,18 +176,18 @@ func main() {
     var out bytes.Buffer;
     cmd.Stdout = &out;
 
-    err := cmd.Run();
+    err = cmd.Run();
 	
 	if err != nil {
         logError("'" + err.Error() + "', do you have git installed?");
 		return;
     }
 
-	logInfo("gitwatcher v" + VERSION + ", " + trim(out.String()) + "\n\t- pull interval: " + strconv.FormatUint(interval, 10) + " (seconds)\n\t- platform: " + runtime.GOOS + " (" + shell + " " + strings.Join(shellArgs, " ")  + ")", true);
-	if strictMode {
+	logInfo("gitwatcher v" + VERSION + ", " + trim(out.String()) + "\n\t- pull interval: " + strconv.FormatUint(gwConfig.Interval, 10) + " (seconds)\n\t- platform: " + runtime.GOOS + " (" + shell + " " + strings.Join(shellArgs, " ")  + ")", true);
+	if gwConfig.StrictMode {
 		logInfo("\t- strict mode: enabled", true);
 	}
-	if hideStdout {
+	if gwConfig.HideStdout {
 		logInfo("\t- child's stdout: hidden", true);
 	}
 	logInfo("\t- log level: everything", false);
@@ -207,7 +251,7 @@ func main() {
 	
 				logInfo("\tparsing...", false);
 	
-				cfg := Config{Shell: shell};
+				cfg := RepoConfig{Shell: shell};
 				cfg.Args = make([]string, len(shellArgs));
 				for i, value := range shellArgs {
 					cfg.Args[i] = value;
@@ -226,7 +270,7 @@ func main() {
 
 				childProcess = exec.Command(cfg.Shell, cfg.Args...);
 
-				if !hideStdout {
+				if !gwConfig.HideStdout {
 					childProcess.Stdout = os.Stdout;
 					childProcess.Stderr = os.Stderr;
 				}
@@ -244,7 +288,7 @@ func main() {
 		}
 
 		firstCheck = false;
-		time.Sleep(time.Duration(interval) * time.Second);
+		time.Sleep(time.Duration(gwConfig.Interval) * time.Second);
 	}
 }
 
@@ -414,7 +458,7 @@ func trim(str string)(string) {
 }
 
 func logInfo(str string, important bool) {
-	if important || logEverything {
+	if important || gwConfig.LogEverything {
 		fmt.Println(str);
 	}
 }
@@ -428,7 +472,7 @@ func logWarning(str string) {
 }
 
 func strictError(str string) {
-	if strictMode {
+	if gwConfig.StrictMode {
 		logError(str);
 		os.Exit(1);
 	}else{
