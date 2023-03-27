@@ -32,8 +32,7 @@ Options:
 
 
 You can also specify default gitwatcher config in gitwatcher.yaml:<br>
-- <code>
-        # default config<br>
+- <code># default config<br>
         log-everything: false<br>
         strict-mode: true<br>
         hide-stdout: false<br>
