@@ -9,15 +9,19 @@ gitwatcher [options]
 Options:
 - <code>-i --interval \<seconds\></code>
     - Specify pull interval.
-- <code>-l --log-everything</code>
+- <code>-l --log-everything \<true/false\></code>
     - Log each action.
+- <code>-d --hide-stdout \<true/false\></code>
+    - Hides child process's stdout.
+- <code>-s --strict-mode \<true/false\></code>
+    - Enable strict mode.
+    - _Strict mode is basically "terminate, if you can". For example, if there was an error when executing "git pull", in strict mode the program will terminate, in default mode it will continue to work._
 - <code>-h --help</code>
     - Print usage.
 - <code>-v --version</code>
     - Print current version.
-- <code>-s --strict-mode</code>
-    - Enable strict mode.
-    - _Strict mode is basically "terminate, if you can". For example, if there was an error when executing "git pull", in strict mode the program will terminate, in default mode it will continue to work._
+- <code>--config-path</code>
+    - Print config path.
 - <code>--check-for-updates</code>
     - Check for newer versions on github.
 - <code>--update</code>
@@ -25,7 +29,16 @@ Options:
     - _Only for Unix-like systems._
 - <code>--init</code>
     - Initializes .gitwatcher/config.yml.
-        
+
+
+You can also specify default gitwatcher config in gitwatcher.yaml:<br>
+- <code>
+        # default config<br>
+        log-everything: false<br>
+        strict-mode: true<br>
+        hide-stdout: false<br>
+        interval: 60<br></code>
+- You can obtain it's path with <code>gitwatcher --config-path</code>.
 
 ## Installing
 1. Download archive for your platform from [/releases](https://github.com/KD3n1z/gitwatcher/releases)
@@ -41,7 +54,7 @@ Requirements:
 
 Clone this repository and then execute these commands:<br>
 - <code>mkdir dest</code>
-- <code>go build -ldflags="-s -w -X main.COMMIT=$(git rev-parse HEAD)" -o "dest/gitwatcher"</code><br>
+- <code>go build -ldflags="-s -w -X main.COMMIT=$(git rev-parse HEAD) -X main.BRANCH=$(git rev-parse --abbrev-ref HEAD)" -o "dest/gitwatcher"</code><br>
 
 or, if you have make installed:<br>
 - <code>make build</code>
