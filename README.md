@@ -41,7 +41,7 @@ Requirements:
 
 Clone this repository and then execute these commands:<br>
 - <code>mkdir dest</code>
-- <code>go build -ldflags="-s -w -X main.COMMIT=$(git rev-parse HEAD)" -o "dest/gitwatcher"</code><br>
+- <code>go build -ldflags="-s -w -X main.COMMIT=$(git rev-parse HEAD) -X main.BRANCH=$(git rev-parse --abbrev-ref HEAD)" -o "dest/gitwatcher"</code><br>
 
 or, if you have make installed:<br>
 - <code>make build</code>
