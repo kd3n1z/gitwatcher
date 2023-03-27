@@ -31,14 +31,14 @@ Options:
     - Initializes .gitwatcher/config.yml.
 
 
-You can also specify default gitwatcher config in gitwatcher.yaml:<br>
-- <code>
-        # default config<br>
-        log-everything: false<br>
-        strict-mode: true<br>
-        hide-stdout: false<br>
-        interval: 60<br></code>
-- You can obtain it's path with <code>gitwatcher --config-path</code>.
+You can also specify default gitwatcher config in gitwatcher.yaml:
+```yaml
+# gitwatcher --config-path
+log-everything: false
+strict-mode: false
+hide-stdout: false
+interval: 60
+```
 
 ## Installing
 1. Download archive for your platform from [/releases](https://github.com/KD3n1z/gitwatcher/releases)
