@@ -47,7 +47,7 @@ type GithubResp struct {
 var BRANCH string = "?" //-ldflags
 var COMMIT string = "?" //-ldflags
 
-const VERSION string = "1.2.2"
+const VERSION string = "1.2.3"
 
 var childProcess *exec.Cmd
 
