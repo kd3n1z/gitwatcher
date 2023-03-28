@@ -61,7 +61,7 @@ func main() {
 
 	if err == nil {
 		os.MkdirAll(cfgPath, os.ModePerm)
-		cfgPath = filepath.Join(cfgPath, "gitwatcher.yaml")
+		cfgPath = filepath.Join(cfgPath, "gitwatcher.yml")
 
 		if _, err := os.Stat(cfgPath); err == nil {
 			data, err := os.ReadFile(cfgPath)
