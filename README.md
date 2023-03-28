@@ -31,7 +31,7 @@ Options:
     - Initializes .gitwatcher/config.yml.
 
 
-You can also specify default gitwatcher config in gitwatcher.yaml:
+You can also specify default gitwatcher config in gitwatcher.yml:
 ```yaml
 # gitwatcher --config-path
 log-everything: false
