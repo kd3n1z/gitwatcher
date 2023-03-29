@@ -42,7 +42,7 @@ shell: bash
 args:
   - -i
   - -c
-  - $cmd
+  - source ~/.nvm/nvm.sh && $cmd # just an example
 ```
 
 ## Installing

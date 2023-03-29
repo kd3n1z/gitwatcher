@@ -59,7 +59,7 @@ var gwConfig GitwatcherConfig = GitwatcherConfig{Interval: 60, LogEverything: fa
 
 // TODO: webhook-mode
 func main() {
-	gwConfig.ShellArgs = []string{"-i", "-c", "$cmd"}
+	gwConfig.ShellArgs = []string{"-c", "$cmd"}
 	gwConfig.Shell = "bash"
 
 	if runtime.GOOS == "windows" {
