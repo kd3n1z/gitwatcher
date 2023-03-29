@@ -454,7 +454,7 @@ func checkForUpdates(selfUpdate bool) {
 			logInfo("Update available!\n\tv"+VERSION+" -> "+parsedResp.TagName+"\n\n"+parsedResp.HtmlUrl, true)
 		}
 	} else {
-		logInfo("You're using the latest version.", true)
+		logInfo("Already at the latest version.", true)
 	}
 }
 

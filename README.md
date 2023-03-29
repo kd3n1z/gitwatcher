@@ -15,7 +15,7 @@ Options:
     - Hides child process's stdout.
 - <code>-s --strict-mode \<true/false\></code>
     - Enable strict mode.
-    - _Strict mode is basically "terminate, if you can". For example, if there was an error when executing "git pull", in strict mode the program will terminate, in default mode it will continue to work._
+    - _Strict mode is basically "terminate, if you can". For example, if there was an error while executing "git pull", in strict mode the program will terminate, in default mode it will continue to work._
 - <code>-h --help</code>
     - Print usage.
 - <code>-v --version</code>
