@@ -23,10 +23,12 @@ import (
 )
 
 type GitwatcherConfig struct {
-	LogEverything bool   `yaml:"log-everything"`
-	StrictMode    bool   `yaml:"strict-mode"`
-	HideStdout    bool   `yaml:"hide-stdout"`
-	Interval      uint64 `yaml:"interval"`
+	LogEverything bool     `yaml:"log-everything"`
+	StrictMode    bool     `yaml:"strict-mode"`
+	HideStdout    bool     `yaml:"hide-stdout"`
+	Interval      uint64   `yaml:"interval"`
+	Shell         string   `yaml:"shell"`
+	ShellArgs     []string `yaml:"args"`
 }
 
 type RepoConfig struct {
@@ -47,7 +49,7 @@ type GithubResp struct {
 var BRANCH string = "?" //-ldflags
 var COMMIT string = "?" //-ldflags
 
-const VERSION string = "1.2.3"
+const VERSION string = "1.2.4"
 
 var childProcess *exec.Cmd
 
@@ -57,6 +59,16 @@ var gwConfig GitwatcherConfig = GitwatcherConfig{Interval: 60, LogEverything: fa
 
 // TODO: webhook-mode
 func main() {
+	gwConfig.ShellArgs = []string{"-i", "-c", "$cmd"}
+	gwConfig.Shell = "bash"
+
+	if runtime.GOOS == "windows" {
+		gwConfig.ShellArgs = []string{"/C$cmd"}
+		gwConfig.Shell = "cmd.exe"
+	} else if runtime.GOOS != "linux" && runtime.GOOS != "darwin" {
+		logWarning("gitwatcher has not been tested on " + runtime.GOOS + ", use at your own risk")
+	}
+
 	cfgPath, err := os.UserConfigDir()
 
 	if err == nil {
@@ -153,16 +165,6 @@ func main() {
 		}
 	}
 
-	var shellArgs []string = []string{"-c", "$cmd"}
-	var shell string = "sh"
-
-	if runtime.GOOS == "windows" {
-		shellArgs = []string{"/C$cmd"}
-		shell = "cmd.exe"
-	} else if runtime.GOOS != "linux" && runtime.GOOS != "darwin" {
-		logWarning("gitwatcher has not been tested on " + runtime.GOOS + ", use at your own risk")
-	}
-
 	cmd := exec.Command("git", "--version")
 
 	var out bytes.Buffer
@@ -175,7 +177,7 @@ func main() {
 		return
 	}
 
-	logInfo("gitwatcher v"+VERSION+", "+trim(out.String())+"\n\t- pull interval: "+strconv.FormatUint(gwConfig.Interval, 10)+" (seconds)\n\t- platform: "+runtime.GOOS+" ("+shell+" "+strings.Join(shellArgs, " ")+")", true)
+	logInfo("gitwatcher v"+VERSION+", "+trim(out.String())+"\n\t- pull interval: "+strconv.FormatUint(gwConfig.Interval, 10)+" (seconds)\n\t- platform: "+runtime.GOOS+" ("+gwConfig.Shell+" "+strings.Join(gwConfig.ShellArgs, " ")+")", true)
 	if gwConfig.StrictMode {
 		logInfo("\t- strict mode: enabled", true)
 	}
@@ -244,15 +246,15 @@ func main() {
 
 					if ok {
 						if cfg.Shell == "" {
-							cfg.Shell = shell
-							logInfo("\tshell not specified, using '"+shell+"'", false)
+							cfg.Shell = gwConfig.Shell
+							logInfo("\tshell not specified, using '"+gwConfig.Shell+"'", false)
 						}
 						if len(cfg.Args) == 0 {
-							cfg.Args = make([]string, len(shellArgs))
-							logInfo("\tshell args not specified, using ["+strings.Join(shellArgs, ", ")+"]", false)
+							cfg.Args = make([]string, len(gwConfig.ShellArgs))
+							logInfo("\tshell args not specified, using ["+strings.Join(gwConfig.ShellArgs, ", ")+"]", false)
 
-							for i := 0; i < len(shellArgs); i++ {
-								cfg.Args[i] = shellArgs[i]
+							for i := 0; i < len(gwConfig.ShellArgs); i++ {
+								cfg.Args[i] = gwConfig.ShellArgs[i]
 							}
 						}
 						if len(cfg.Cmd) > 0 {

@@ -38,6 +38,11 @@ log-everything: false
 strict-mode: false
 hide-stdout: false
 interval: 60
+shell: bash
+args:
+  - -i
+  - -c
+  - $cmd
 ```
 
 ## Installing
