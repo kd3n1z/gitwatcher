@@ -361,11 +361,11 @@ func checkForUpdates(selfUpdate bool) {
 
 			logInfo("\tcreating temp file...", true)
 
-			file, err := os.CreateTemp("", "gwr-update")
+			file, err := os.CreateTemp("", "gwr-update-zip")
 
-			path := file.Name()
+			zipPath := file.Name()
 
-			logInfo("\t\t"+path, true)
+			logInfo("\t\t"+zipPath, true)
 
 			if err != nil {
 				logError(err.Error())
@@ -391,7 +391,7 @@ func checkForUpdates(selfUpdate bool) {
 			file.Close()
 			downloadResp.Body.Close()
 
-			reader, err := zip.OpenReader(path)
+			reader, err := zip.OpenReader(zipPath)
 
 			if err != nil {
 				logError(err.Error())
@@ -401,15 +401,19 @@ func checkForUpdates(selfUpdate bool) {
 			logInfo("\tunzipping...", true)
 			for _, f := range reader.File {
 				if f.Name == "gitwatcher" {
-					cPath, err := os.Executable()
+					currentBinPath, err := os.Executable()
 
 					if err != nil {
 						logError(err.Error())
 						return
 					}
 
-					logInfo("\t\topening '"+cPath+"'...", true)
-					executable, err := os.OpenFile(cPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, f.Mode())
+					logInfo("\t\tcreating temp file...", true)
+					binFile, err := os.CreateTemp("", "gwr-update-bin")
+
+					binPath := binFile.Name()
+
+					logInfo("\t\t\t"+binPath, true)
 
 					if err != nil {
 						logError(err.Error())
@@ -425,7 +429,7 @@ func checkForUpdates(selfUpdate bool) {
 						return
 					}
 
-					_, err = io.Copy(executable, zippedFile)
+					_, err = io.Copy(binFile, zippedFile)
 
 					if err != nil {
 						logError(err.Error())
@@ -433,7 +437,20 @@ func checkForUpdates(selfUpdate bool) {
 					}
 
 					zippedFile.Close()
-					executable.Close()
+					binFile.Close()
+
+					logInfo("\t\tmoving "+binPath+" to "+currentBinPath+"...", true)
+
+					err = os.Rename(binPath, currentBinPath)
+
+					if err != nil {
+						logError(err.Error())
+						return
+					}
+
+					logInfo("\t\tchanging permissions to 755...", true)
+
+					os.Chmod(currentBinPath, 755)
 
 					break
 				}
@@ -441,9 +458,9 @@ func checkForUpdates(selfUpdate bool) {
 
 			reader.Close()
 
-			logInfo("\t\tcleaning up...", true)
+			logInfo("\tcleaning up...", true)
 
-			err = os.Remove(path)
+			err = os.Remove(zipPath)
 
 			if err != nil {
 				logError(err.Error())

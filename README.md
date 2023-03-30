@@ -40,7 +40,6 @@ hide-stdout: false
 interval: 60
 shell: bash
 args:
-  - -i
   - -c
   - source ~/.nvm/nvm.sh && $cmd # just an example
 ```
