@@ -49,7 +49,7 @@ type GithubResp struct {
 var BRANCH string = "?" //-ldflags
 var COMMIT string = "?" //-ldflags
 
-const VERSION string = "1.2.6"
+const VERSION string = "1.3.0"
 
 var childProcess *exec.Cmd
 
@@ -220,7 +220,7 @@ func main() {
 		}
 		logInfo("\t'"+outStr+"'", false)
 
-		if firstCheck || (outStr != "already up to date." && len(outStr) > 0) {
+		if firstCheck || (!strings.HasPrefix(outStr, "already up to date.") && len(outStr) > 0) {
 			logInfo(time.Now().Format("15:04")+" - restarting... ", true)
 			if _, err := os.Stat(configPath); err == nil {
 				if childProcess != nil {
