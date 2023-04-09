@@ -89,9 +89,9 @@ func main() {
 		}
 	}
 
-	var configPath string = filepath.Join(".gitwatcher", "config.yml")
+	configPath := filepath.Join(".gitwatcher", "config.yml")
 
-	var args []string = os.Args[1:]
+	args := os.Args[1:]
 
 	for i := 0; i < len(args); i++ {
 		switch args[i] {
@@ -105,7 +105,7 @@ func main() {
 			gwConfig.Interval = parsedInterval
 			break
 		case "-h", "--help":
-			logInfo("gitwatcher v"+VERSION+"\n\nUsage: gitwatcher [options]\n\t-i --interval <seconds>\t\t Specify pull interval.\n\t-d --hide-stdout <true/false>\t Hides child process's stdout.\n\t-s --strict-mode <true/false>\t Enable strict mode.\n\t-l --log-everything <true/false> Log each action.\n\t-h --help\t\t\t Print usage.\n\t-v --version\t\t\t Print current version.\n\t--config-path\t\t\t Print config path.\n\t--check-for-updates\t\t Check for newer versions on github.\n\t--update\t\t\t Update to a newer version.\n\t--init\t\t\t\t Initialize .gitwatcher/config.yml.", true)
+			logInfo("gitwatcher v"+VERSION+"\n\nUsage: gitwatcher [options]\n\t-i --interval <seconds>\t\t Specify pull interval.\n\t-d --hide-stdout <true/false>\t Hides child process's stdout.\n\t-s --strict-mode <true/false>\t Enable strict mode.\n\t-l --log-everything <true/false> Log each action.\n\t-h --help\t\t\t Print usage.\n\t-v --version\t\t\t Print current version.\n\t--config-path\t\t\t Print config path.\n\t--check-for-updates\t\t Check for newer versions on github.\n\t--update\t\t\t Update to a newer version.\n\t--test\t\t\t\t Execute command in config.yml and exit.\n\t--init\t\t\t\t Initialize .gitwatcher/config.yml.", true)
 			return
 		case "-v", "--version":
 			logInfo("gitwatcher v"+VERSION+", "+BRANCH+"/"+COMMIT, true)
@@ -128,6 +128,10 @@ func main() {
 				logWarning(args[i] + ": better use '" + args[i] + " true'")
 			}
 			break
+		case "--test":
+			gwConfig.LogEverything = true
+			restartApp(configPath, 0)
+			return
 		case "--check-for-updates":
 			checkForUpdates(false)
 			return
@@ -197,7 +201,7 @@ func main() {
 		os.Exit(1)
 	}()
 
-	var firstCheck bool = true
+	firstCheck := true
 
 	for {
 		logInfo("executing 'git pull'...", false)
@@ -210,7 +214,7 @@ func main() {
 
 		err := cmd.Run()
 
-		var outStr string = strings.ToLower(trim(out.String()) + trim(stdErr.String()))
+		outStr := strings.ToLower(trim(out.String()) + trim(stdErr.String()))
 
 		if err != nil {
 			strictError(err.Error() + ", '" + outStr + "'")
@@ -222,78 +226,83 @@ func main() {
 
 		if firstCheck || (!strings.HasPrefix(outStr, "already up to date.") && len(outStr) > 0) {
 			logInfo(time.Now().Format("15:04")+" - restarting... ", true)
-			if _, err := os.Stat(configPath); err == nil {
-				if childProcess != nil {
-					logInfo("\tkilling previous process...", false)
-
-					killProcessGroup(childProcess.Process.Pid)
-				}
-
-				logInfo("\treading '"+configPath+"'...", false)
-				data, err := os.ReadFile(configPath)
-				if err == nil {
-					logInfo("\tparsing...", false)
-
-					parsedCfg := map[string]RepoConfig{}
-
-					err = yaml.Unmarshal(data, &parsedCfg)
-
-					cfg, ok := parsedCfg[runtime.GOOS]
-
-					if !ok {
-						cfg, ok = parsedCfg["default"]
-					}
-
-					if ok {
-						if cfg.Shell == "" {
-							cfg.Shell = gwConfig.Shell
-							logInfo("\tshell not specified, using '"+gwConfig.Shell+"'", false)
-						}
-						if len(cfg.Args) == 0 {
-							cfg.Args = make([]string, len(gwConfig.ShellArgs))
-							logInfo("\tshell args not specified, using ["+strings.Join(gwConfig.ShellArgs, ", ")+"]", false)
-
-							for i := 0; i < len(gwConfig.ShellArgs); i++ {
-								cfg.Args[i] = gwConfig.ShellArgs[i]
-							}
-						}
-						if len(cfg.Cmd) > 0 {
-							for i := 0; i < len(cfg.Args); i++ {
-								cfg.Args[i] = strings.ReplaceAll(cfg.Args[i], "$cmd", cfg.Cmd)
-							}
-
-							logInfo("\texecuting '"+cfg.Shell+" "+strings.Join(cfg.Args, " ")+"'", false)
-
-							childProcess = exec.Command(cfg.Shell, cfg.Args...)
-
-							if !gwConfig.HideStdout {
-								childProcess.Stdout = os.Stdout
-								childProcess.Stderr = os.Stderr
-							}
-
-							configProcess()
-
-							err = childProcess.Start()
-
-							if err != nil {
-								strictError("failed to start: '" + err.Error() + "'")
-							}
-						} else {
-							strictError("config.yml: cmd not specified")
-						}
-					} else {
-						strictError("config.yml: no suitable config found (default | " + runtime.GOOS + ")")
-					}
-				} else {
-					strictError("error reading config.yml: '" + err.Error() + "'")
-				}
-			} else {
-				strictError("config.yml not found")
-			}
+			restartApp(configPath, 1)
 		}
 
 		firstCheck = false
 		time.Sleep(time.Duration(gwConfig.Interval) * time.Second)
+	}
+}
+
+func restartApp(configPath string, tabSize int) {
+	tabs := strings.Repeat("\t", tabSize)
+	if _, err := os.Stat(configPath); err == nil {
+		if childProcess != nil {
+			logInfo(tabs+"killing previous process...", false)
+
+			killProcessGroup(childProcess.Process.Pid)
+		}
+
+		logInfo(tabs+"reading '"+configPath+"'...", false)
+		data, err := os.ReadFile(configPath)
+		if err == nil {
+			logInfo(tabs+"parsing...", false)
+
+			parsedCfg := map[string]RepoConfig{}
+
+			err = yaml.Unmarshal(data, &parsedCfg)
+
+			cfg, ok := parsedCfg[runtime.GOOS]
+
+			if !ok {
+				cfg, ok = parsedCfg["default"]
+			}
+
+			if ok {
+				if cfg.Shell == "" {
+					cfg.Shell = gwConfig.Shell
+					logInfo(tabs+"shell not specified, using '"+gwConfig.Shell+"'", false)
+				}
+				if len(cfg.Args) == 0 {
+					cfg.Args = make([]string, len(gwConfig.ShellArgs))
+					logInfo(tabs+"shell args not specified, using ["+strings.Join(gwConfig.ShellArgs, ", ")+"]", false)
+
+					for i := 0; i < len(gwConfig.ShellArgs); i++ {
+						cfg.Args[i] = gwConfig.ShellArgs[i]
+					}
+				}
+				if len(cfg.Cmd) > 0 {
+					for i := 0; i < len(cfg.Args); i++ {
+						cfg.Args[i] = strings.ReplaceAll(cfg.Args[i], "$cmd", cfg.Cmd)
+					}
+
+					logInfo(tabs+"executing '"+cfg.Shell+" "+strings.Join(cfg.Args, " ")+"'", false)
+
+					childProcess = exec.Command(cfg.Shell, cfg.Args...)
+
+					if !gwConfig.HideStdout {
+						childProcess.Stdout = os.Stdout
+						childProcess.Stderr = os.Stderr
+					}
+
+					configProcess()
+
+					err = childProcess.Start()
+
+					if err != nil {
+						strictError("failed to start: '" + err.Error() + "'")
+					}
+				} else {
+					strictError("config.yml: cmd not specified")
+				}
+			} else {
+				strictError("config.yml: no suitable config found (default | " + runtime.GOOS + ")")
+			}
+		} else {
+			strictError("error reading config.yml: '" + err.Error() + "'")
+		}
+	} else {
+		strictError("config.yml not found")
 	}
 }
 
@@ -335,10 +344,10 @@ func checkForUpdates(selfUpdate bool) {
 				return
 			}
 
-			var updateUrl string = ""
+			updateUrl := ""
 
-			var cOS = runtime.GOOS
-			var cArch = runtime.GOARCH
+			cOS := runtime.GOOS
+			cArch := runtime.GOARCH
 			if cOS == "darwin" {
 				cOS = "macos"
 			}
@@ -347,7 +356,7 @@ func checkForUpdates(selfUpdate bool) {
 			}
 
 			for _, asset := range parsedResp.Assets {
-				var fName string = strings.ToLower(asset.Name)
+				fName := strings.ToLower(asset.Name)
 				if fName == cOS+".zip" || fName == cOS+"-"+cArch+".zip" {
 					updateUrl = asset.DownloadUrl
 					break

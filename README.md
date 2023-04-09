@@ -27,6 +27,8 @@ Options:
 - <code>--update</code>
     - Update to a newer version.
     - _Only for Unix-like systems._
+- <code>--test</code>
+    - Execute command in config.yml and exit.
 - <code>--init</code>
     - Initializes .gitwatcher/config.yml.
 
