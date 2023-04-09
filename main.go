@@ -130,7 +130,7 @@ func main() {
 			break
 		case "--test":
 			gwConfig.LogEverything = true
-			restartApp(configPath, 0)
+			restartApp(configPath, true)
 			return
 		case "--check-for-updates":
 			checkForUpdates(false)
@@ -226,7 +226,7 @@ func main() {
 
 		if firstCheck || (!strings.HasPrefix(outStr, "already up to date.") && len(outStr) > 0) {
 			logInfo(time.Now().Format("15:04")+" - restarting... ", true)
-			restartApp(configPath, 1)
+			restartApp(configPath, false)
 		}
 
 		firstCheck = false
@@ -234,8 +234,11 @@ func main() {
 	}
 }
 
-func restartApp(configPath string, tabSize int) {
-	tabs := strings.Repeat("\t", tabSize)
+func restartApp(configPath string, testMode bool) {
+	tabs := ""
+	if !testMode {
+		tabs = "\t"
+	}
 	if _, err := os.Stat(configPath); err == nil {
 		if childProcess != nil {
 			logInfo(tabs+"killing previous process...", false)
@@ -287,7 +290,11 @@ func restartApp(configPath string, tabSize int) {
 
 					configProcess()
 
-					err = childProcess.Start()
+					if testMode {
+						err = childProcess.Run()
+					} else {
+						err = childProcess.Start()
+					}
 
 					if err != nil {
 						strictError("failed to start: '" + err.Error() + "'")
