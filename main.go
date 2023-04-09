@@ -130,6 +130,7 @@ func main() {
 			break
 		case "--test":
 			gwConfig.LogEverything = true
+			registerExitHandler()
 			restartApp(configPath, true)
 			return
 		case "--check-for-updates":
@@ -190,16 +191,7 @@ func main() {
 	}
 	logInfo("\t- log level: everything", false)
 
-	c := make(chan os.Signal)
-	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
-	go func() {
-		<-c
-		logInfo("cleaning up...", false)
-		if childProcess != nil {
-			killProcessGroup(childProcess.Process.Pid)
-		}
-		os.Exit(1)
-	}()
+	registerExitHandler()
 
 	firstCheck := true
 
@@ -232,6 +224,19 @@ func main() {
 		firstCheck = false
 		time.Sleep(time.Duration(gwConfig.Interval) * time.Second)
 	}
+}
+
+func registerExitHandler() {
+	c := make(chan os.Signal)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-c
+		logInfo("cleaning up...", false)
+		if childProcess != nil {
+			killProcessGroup(childProcess.Process.Pid)
+		}
+		os.Exit(1)
+	}()
 }
 
 func restartApp(configPath string, testMode bool) {
