@@ -55,8 +55,6 @@ var childProcess *exec.Cmd
 
 var gwConfig GitwatcherConfig = GitwatcherConfig{Interval: 60, LogEverything: false, StrictMode: false, HideStdout: false}
 
-// This is my first program written in go, so it may be unstable. Better use --strict-mode
-
 // TODO: webhook-mode
 func main() {
 	gwConfig.ShellArgs = []string{"-c", "$cmd"}
@@ -502,16 +500,16 @@ func trim(str string) string {
 
 func logInfo(str string, important bool) {
 	if important || gwConfig.LogEverything {
-		fmt.Println(str)
+		fmt.Fprintln(os.Stdout, str)
 	}
 }
 
 func logError(str string) {
-	fmt.Println(color.RedString("error: ") + str)
+	fmt.Fprintln(os.Stderr, color.RedString("error: ") + str)
 }
 
 func logWarning(str string) {
-	fmt.Println(color.YellowString("warning: ") + str)
+	fmt.Fprintln(os.Stderr, color.YellowString("warning: ") + str)
 }
 
 func strictError(str string) {
