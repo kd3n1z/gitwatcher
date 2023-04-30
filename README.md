@@ -39,6 +39,7 @@ You can also specify default gitwatcher config in gitwatcher.yml:
 log-everything: false
 strict-mode: false
 hide-stdout: false
+check-for-updates: false
 interval: 60
 shell: bash
 args:

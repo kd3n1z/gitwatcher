@@ -23,12 +23,13 @@ import (
 )
 
 type GitwatcherConfig struct {
-	LogEverything bool     `yaml:"log-everything"`
-	StrictMode    bool     `yaml:"strict-mode"`
-	HideStdout    bool     `yaml:"hide-stdout"`
-	Interval      uint64   `yaml:"interval"`
-	Shell         string   `yaml:"shell"`
-	ShellArgs     []string `yaml:"args"`
+	LogEverything   bool     `yaml:"log-everything"`
+	StrictMode      bool     `yaml:"strict-mode"`
+	HideStdout      bool     `yaml:"hide-stdout"`
+	Interval        uint64   `yaml:"interval"`
+	Shell           string   `yaml:"shell"`
+	ShellArgs       []string `yaml:"args"`
+	CheckForUpdates bool     `yaml:"check-for-updates"`
 }
 
 type RepoConfig struct {
@@ -53,7 +54,7 @@ const VERSION string = "1.3.0"
 
 var childProcess *exec.Cmd
 
-var gwConfig GitwatcherConfig = GitwatcherConfig{Interval: 60, LogEverything: false, StrictMode: false, HideStdout: false}
+var gwConfig GitwatcherConfig = GitwatcherConfig{Interval: 60, LogEverything: false, StrictMode: false, HideStdout: false, CheckForUpdates: false}
 
 // TODO: webhook-mode
 func main() {
@@ -132,10 +133,10 @@ func main() {
 			restartApp(configPath, true)
 			return
 		case "--check-for-updates":
-			checkForUpdates(false)
+			checkForUpdates(false, true)
 			return
 		case "--update":
-			checkForUpdates(true)
+			checkForUpdates(true, true)
 			return
 		case "--config-path":
 			logInfo(cfgPath, true)
@@ -166,6 +167,10 @@ func main() {
 			logError(args[i] + ": invalid option")
 			return
 		}
+	}
+
+	if gwConfig.CheckForUpdates {
+		checkForUpdates(false, false)
 	}
 
 	cmd := exec.Command("git", "--version")
@@ -316,7 +321,7 @@ func restartApp(configPath string, testMode bool) {
 	}
 }
 
-func checkForUpdates(selfUpdate bool) {
+func checkForUpdates(selfUpdate bool, logNotFound bool) {
 	resp, err := http.Get("https://api.github.com/repos/KD3n1z/gitwatcher/releases/latest")
 
 	if err != nil {
@@ -489,7 +494,7 @@ func checkForUpdates(selfUpdate bool) {
 		} else {
 			logInfo("Update available!\n\tv"+VERSION+" -> "+parsedResp.TagName+"\n\n"+parsedResp.HtmlUrl, true)
 		}
-	} else {
+	} else if logNotFound {
 		logInfo("Already at the latest version.", true)
 	}
 }
@@ -505,11 +510,11 @@ func logInfo(str string, important bool) {
 }
 
 func logError(str string) {
-	fmt.Fprintln(os.Stderr, color.RedString("error: ") + str)
+	fmt.Fprintln(os.Stderr, color.RedString("error: ")+str)
 }
 
 func logWarning(str string) {
-	fmt.Fprintln(os.Stderr, color.YellowString("warning: ") + str)
+	fmt.Fprintln(os.Stderr, color.YellowString("warning: ")+str)
 }
 
 func strictError(str string) {
