@@ -17,11 +17,11 @@ build-all: clean
 	-mkdir dest/windows
 	-mkdir dest/windows/arm64
 	-mkdir dest/windows/x64
-	env GOOS=linux GOARCG=arm64 go build $(goArgs) -o "dest/linux/arm64/gitwatcher"
-	env GOOS=linux GOARCG=amd64 go build $(goArgs) -o "dest/linux/x64/gitwatcher"
-	env GOOS=darwin GOARCG=amd64 go build $(goArgs) -o "dest/darwin/x64/gitwatcher"
-	env GOOS=windows GOARCG=amd64 go build $(goArgs) -o "dest/windows/x64/gitwatcher.exe"
-	env GOOS=windows GOARCG=arm64 go build $(goArgs) -o "dest/windows/arm64/gitwatcher.exe"
+	env GOOS=linux GOARCH=arm64 go build $(goArgs) -o "dest/linux/arm64/gitwatcher"
+	env GOOS=linux GOARCH=amd64 go build $(goArgs) -o "dest/linux/x64/gitwatcher"
+	env GOOS=darwin GOARCH=amd64 go build $(goArgs) -o "dest/darwin/x64/gitwatcher"
+	env GOOS=windows GOARCH=amd64 go build $(goArgs) -o "dest/windows/x64/gitwatcher.exe"
+	env GOOS=windows GOARCH=arm64 go build $(goArgs) -o "dest/windows/arm64/gitwatcher.exe"
 
 zip-all:
 	-mkdir dest/zips
