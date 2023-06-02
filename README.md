@@ -47,7 +47,7 @@ args:
   - source ~/.nvm/nvm.sh && $cmd # just an example
 ```
 
-## Installing
+## Installation
 1. Download archive for your platform from [/releases](https://github.com/KD3n1z/gitwatcher/releases)
 2. Unzip it
 3. Move it to your bin directory:<br>
