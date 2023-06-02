@@ -33,9 +33,5 @@ zip-all:
 
 publish-all: build-all zip-all
 
-
-alias:
-	echo alias gwgo="/Users/deniskomarkov/Documents/gitwatcher-go/dest/gitwatcher"
-
 clean: 
 	-rm -rf dest
