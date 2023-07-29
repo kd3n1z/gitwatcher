@@ -1,4 +1,4 @@
-module main
+module github.com/KD3n1z/gitwatcher
 
 go 1.20
 
