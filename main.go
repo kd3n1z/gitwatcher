@@ -287,7 +287,7 @@ func restartApp(configPath string, testMode bool) {
 						cfg.Args[i] = strings.ReplaceAll(cfg.Args[i], "$cmd", cfg.Cmd)
 					}
 
-					logInfo(tabs+"executing '"+cfg.Shell+" "+strings.Join(cfg.Args, " ")+"'", false)
+					logInfo(tabs+"executing '"+cfg.Shell+" "+strings.Join(cfg.Args, " ")+"'\n", false)
 
 					childProcess = exec.Command(cfg.Shell, cfg.Args...)
 
