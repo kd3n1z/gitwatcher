@@ -26,7 +26,7 @@ Options:
     - Check for newer versions on github.
 - <code>--update</code>
     - Update to a newer version.
-    - _Only for Unix-like systems._
+    - _Only for Unix-like platforms._
 - <code>--test</code>
     - Execute command in config.yml and exit.
 - <code>--init</code>
