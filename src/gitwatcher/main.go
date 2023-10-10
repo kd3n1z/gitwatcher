@@ -50,7 +50,7 @@ type GithubResp struct {
 var BRANCH string = "?" //-ldflags
 var COMMIT string = "?" //-ldflags
 
-const VERSION string = "1.3.1"
+const VERSION string = "1.4.0"
 
 var childProcess *exec.Cmd
 
@@ -114,7 +114,7 @@ func main() {
 				gwConfig.LogEverything = args[i] == "true"
 			} else {
 				gwConfig.LogEverything = true
-				logWarning(args[i] + ": better use '" + args[i] + " true'")
+				logWarning(args[i] + " is deprecated, use '" + args[i] + " true'")
 			}
 			break
 		case "-s", "--strict-mode":
@@ -123,7 +123,7 @@ func main() {
 				gwConfig.StrictMode = args[i] == "true"
 			} else {
 				gwConfig.StrictMode = true
-				logWarning(args[i] + ": better use '" + args[i] + " true'")
+				logWarning(args[i] + " is deprecated, use '" + args[i] + " true'")
 			}
 			break
 		case "--test":
@@ -159,7 +159,7 @@ func main() {
 				gwConfig.HideStdout = args[i] == "true"
 			} else {
 				gwConfig.HideStdout = true
-				logWarning(args[i] + ": better use '" + args[i] + " true'")
+				logWarning(args[i] + " is deprecated, use '" + args[i] + " true'")
 			}
 			break
 		default:
