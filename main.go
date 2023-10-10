@@ -98,8 +98,7 @@ func main() {
 			i += 1
 			parsedInterval, err := strconv.ParseUint(args[i], 10, 64)
 			if err != nil || parsedInterval <= 0 {
-				logError(args[i] + ": invalid interval")
-				return
+				throwError(args[i] + ": invalid interval")
 			}
 			gwConfig.Interval = parsedInterval
 			break
@@ -164,8 +163,7 @@ func main() {
 			}
 			break
 		default:
-			logError(args[i] + ": invalid option")
-			return
+			throwError(args[i] + ": invalid option")
 		}
 	}
 
@@ -181,8 +179,7 @@ func main() {
 	err = cmd.Run()
 
 	if err != nil {
-		logError("'" + err.Error() + "', do you have git installed?")
-		return
+		throwError("'" + err.Error() + "', do you have git installed?")
 	}
 
 	logInfo("gitwatcher v"+VERSION+", "+trim(out.String())+"\n\t- pull interval: "+strconv.FormatUint(gwConfig.Interval, 10)+" (seconds)\n\t- platform: "+runtime.GOOS+" ("+gwConfig.Shell+" "+strings.Join(gwConfig.ShellArgs, " ")+")", true)
@@ -325,15 +322,13 @@ func checkForUpdates(selfUpdate bool, logNotFound bool) {
 	resp, err := http.Get("https://api.github.com/repos/KD3n1z/gitwatcher/releases/latest")
 
 	if err != nil {
-		logError(err.Error())
-		return
+		throwError(err.Error())
 	}
 
 	body, err := io.ReadAll(resp.Body)
 
 	if err != nil {
-		logError(err.Error())
-		return
+		throwError(err.Error())
 	}
 
 	parsedResp := GithubResp{}
@@ -343,8 +338,7 @@ func checkForUpdates(selfUpdate bool, logNotFound bool) {
 	resp.Body.Close()
 
 	if err != nil {
-		logError("parse error: '" + err.Error() + "'")
-		return
+		throwError("parse error: '" + err.Error() + "'")
 	}
 
 	localV, _ := version.NewVersion(VERSION)
@@ -355,8 +349,7 @@ func checkForUpdates(selfUpdate bool, logNotFound bool) {
 			logInfo("Updating...", true)
 
 			if runtime.GOOS == "windows" {
-				logError("not supported on windows")
-				return
+				throwError("not supported on windows")
 			}
 
 			updateUrl := ""
@@ -379,8 +372,7 @@ func checkForUpdates(selfUpdate bool, logNotFound bool) {
 			}
 
 			if updateUrl == "" {
-				logError("asset " + cOS + "-" + cArch + ".zip not found")
-				return
+				throwError("asset " + cOS + "-" + cArch + ".zip not found")
 			}
 
 			logInfo("\tcreating temp file...", true)
@@ -392,8 +384,7 @@ func checkForUpdates(selfUpdate bool, logNotFound bool) {
 			logInfo("\t\t"+zipPath, true)
 
 			if err != nil {
-				logError(err.Error())
-				return
+				throwError(err.Error())
 			}
 
 			logInfo("\tdownloading '"+updateUrl+"'...", true)
@@ -401,15 +392,13 @@ func checkForUpdates(selfUpdate bool, logNotFound bool) {
 			downloadResp, err := http.Get(updateUrl)
 
 			if err != nil {
-				logError(err.Error())
-				return
+				throwError(err.Error())
 			}
 
 			_, err = io.Copy(file, downloadResp.Body)
 
 			if err != nil {
-				logError(err.Error())
-				return
+				throwError(err.Error())
 			}
 
 			file.Close()
@@ -418,8 +407,7 @@ func checkForUpdates(selfUpdate bool, logNotFound bool) {
 			reader, err := zip.OpenReader(zipPath)
 
 			if err != nil {
-				logError(err.Error())
-				return
+				throwError(err.Error())
 			}
 
 			logInfo("\tunzipping...", true)
@@ -428,8 +416,7 @@ func checkForUpdates(selfUpdate bool, logNotFound bool) {
 					currentBinPath, err := os.Executable()
 
 					if err != nil {
-						logError(err.Error())
-						return
+						throwError(err.Error())
 					}
 
 					logInfo("\t\tcreating temp file...", true)
@@ -440,8 +427,7 @@ func checkForUpdates(selfUpdate bool, logNotFound bool) {
 					logInfo("\t\t\t"+binPath, true)
 
 					if err != nil {
-						logError(err.Error())
-						return
+						throwError(err.Error())
 					}
 
 					logInfo("\t\tdecompressing...", true)
@@ -449,15 +435,13 @@ func checkForUpdates(selfUpdate bool, logNotFound bool) {
 					zippedFile, err := f.Open()
 
 					if err != nil {
-						logError(err.Error())
-						return
+						throwError(err.Error())
 					}
 
 					_, err = io.Copy(binFile, zippedFile)
 
 					if err != nil {
-						logError(err.Error())
-						return
+						throwError(err.Error())
 					}
 
 					zippedFile.Close()
@@ -468,8 +452,7 @@ func checkForUpdates(selfUpdate bool, logNotFound bool) {
 					err = os.Rename(binPath, currentBinPath)
 
 					if err != nil {
-						logError(err.Error())
-						return
+						throwError(err.Error())
 					}
 
 					logInfo("\t\tchanging permissions to 755...", true)
@@ -487,7 +470,7 @@ func checkForUpdates(selfUpdate bool, logNotFound bool) {
 			err = os.Remove(zipPath)
 
 			if err != nil {
-				logError(err.Error())
+				throwError(err.Error())
 			}
 
 			logInfo("\tdone, try gitwatcher --version", true)
@@ -509,8 +492,9 @@ func logInfo(str string, important bool) {
 	}
 }
 
-func logError(str string) {
+func throwError(str string) {
 	fmt.Fprintln(os.Stderr, color.RedString("error: ")+str)
+	os.Exit(1)
 }
 
 func logWarning(str string) {
@@ -519,8 +503,7 @@ func logWarning(str string) {
 
 func strictError(str string) {
 	if gwConfig.StrictMode {
-		logError("strict: " + str)
-		os.Exit(1)
+		throwError("strict: " + str)
 	} else {
 		logWarning(str)
 	}
