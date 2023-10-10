@@ -1,11 +1,11 @@
 zipArgs=-9
-goArgs=-ldflags="-s -w -X main.COMMIT=$$(git rev-parse HEAD) -X main.BRANCH=$$(git rev-parse --abbrev-ref HEAD)"
+goArgs=-ldflags="-s -w -X main.COMMIT=$$(git rev-parse HEAD) -X main.BRANCH=$$(git rev-parse --abbrev-ref HEAD)" ./src/gitwatcher
 
 all: build
 
 build: clean
 	-mkdir dest
-	go build $(goArgs) -o "dest/gitwatcher"
+	go build -o "dest/gitwatcher" $(goArgs)
 
 build-all: clean
 	-mkdir dest
@@ -17,11 +17,11 @@ build-all: clean
 	-mkdir dest/windows
 	-mkdir dest/windows/arm64
 	-mkdir dest/windows/x64
-	env GOOS=linux GOARCH=arm64 go build $(goArgs) -o "dest/linux/arm64/gitwatcher"
-	env GOOS=linux GOARCH=amd64 go build $(goArgs) -o "dest/linux/x64/gitwatcher"
-	env GOOS=darwin GOARCH=amd64 go build $(goArgs) -o "dest/darwin/x64/gitwatcher"
-	env GOOS=windows GOARCH=amd64 go build $(goArgs) -o "dest/windows/x64/gitwatcher.exe"
-	env GOOS=windows GOARCH=arm64 go build $(goArgs) -o "dest/windows/arm64/gitwatcher.exe"
+	env GOOS=linux GOARCH=arm64 go build -o "dest/linux/arm64/gitwatcher" $(goArgs)
+	env GOOS=linux GOARCH=amd64 go build -o "dest/linux/x64/gitwatcher" $(goArgs)
+	env GOOS=darwin GOARCH=amd64 go build -o "dest/darwin/x64/gitwatcher" $(goArgs)
+	env GOOS=windows GOARCH=amd64 go build -o "dest/windows/x64/gitwatcher.exe" $(goArgs)
+	env GOOS=windows GOARCH=arm64 go build -o "dest/windows/arm64/gitwatcher.exe" $(goArgs)
 
 zip-all:
 	-mkdir dest/zips
