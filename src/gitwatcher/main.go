@@ -56,6 +56,8 @@ var childProcess *exec.Cmd
 
 var gwConfig GitwatcherConfig = GitwatcherConfig{Interval: 60, LogEverything: false, StrictMode: false, HideStdout: false, CheckForUpdates: false}
 
+var branchName string
+
 // TODO: webhook-mode
 func main() {
 	gwConfig.ShellArgs = []string{"-c", "$cmd"}
@@ -191,32 +193,20 @@ func main() {
 	}
 	logInfo("\t- log level: everything", false)
 
+	branchName = getCurrentBranchName()
+
 	registerExitHandler()
 
 	firstCheck := true
 
 	for {
-		logInfo("executing 'git pull'...", false)
-		cmd := exec.Command("git", "pull")
+		changesAvailable := fetchChanges()
 
-		var out bytes.Buffer
-		var stdErr bytes.Buffer
-		cmd.Stdout = &out
-		cmd.Stderr = &stdErr
-
-		err := cmd.Run()
-
-		outStr := strings.ToLower(trim(out.String()) + trim(stdErr.String()))
-
-		if err != nil {
-			strictError(err.Error() + ", '" + outStr + "'")
+		if changesAvailable {
+			updateRepository()
 		}
-		if strings.HasPrefix(outStr, "fatal:") || strings.HasPrefix(outStr, "error:") {
-			strictError("'" + outStr + "'")
-		}
-		logInfo("\t'"+outStr+"'", false)
 
-		if firstCheck || (!strings.HasPrefix(outStr, "already up to date.") && len(outStr) > 0) {
+		if changesAvailable || firstCheck {
 			logInfo(time.Now().Format("15:04")+" - restarting... ", true)
 			restartApp(configPath, false)
 		}
@@ -224,6 +214,86 @@ func main() {
 		firstCheck = false
 		time.Sleep(time.Duration(gwConfig.Interval) * time.Second)
 	}
+}
+
+func fetchChanges() bool {
+	logInfo("executing 'git fetch origin "+branchName+" -v'...", false)
+
+	output, err := executeCommand("git", "fetch", "origin", branchName, "-v")
+
+	if err != nil {
+		strictError(err.Error())
+		return false
+	}
+
+	logInfo("\t'"+output+"'", false)
+
+	remoteHash := getBranchHash("origin/" + branchName)
+	localHash := getBranchHash(branchName)
+
+	logInfo("origin/"+branchName+": "+remoteHash+"\n......."+branchName+": "+localHash, false)
+
+	return remoteHash != localHash
+}
+
+func updateRepository() bool {
+	remoteBranch := "origin/" + getCurrentBranchName()
+
+	logInfo("executing 'git reset --hard "+remoteBranch+"'...", false)
+
+	output, err := executeCommand("git", "reset", "--hard", remoteBranch)
+
+	if err != nil {
+		strictError(err.Error())
+		return false
+	}
+
+	logInfo("\t'"+output+"'", false)
+
+	return true
+}
+
+func getBranchHash(branch string) string {
+	cmd := exec.Command("git", "rev-parse", branch)
+	output, err := cmd.Output()
+
+	if err != nil {
+		throwError("unable to get current branch name: " + err.Error())
+	}
+
+	return trim(string(output))
+}
+
+func getCurrentBranchName() string {
+	logInfo("executing 'git rev-parse --abrev-ref HEAD'...", false)
+
+	cmd := exec.Command("git", "rev-parse", "--abbrev-ref", "HEAD")
+	output, err := cmd.Output()
+
+	if err != nil {
+		throwError("unable to get current branch name: " + err.Error())
+	}
+
+	name := trim(string(output))
+
+	logInfo("\t'"+name+"'", false)
+
+	return name
+}
+
+func executeCommand(name string, arg ...string) (string, error) {
+	cmd := exec.Command(name, arg...)
+
+	var out bytes.Buffer
+	var stdErr bytes.Buffer
+	cmd.Stdout = &out
+	cmd.Stderr = &stdErr
+
+	err := cmd.Run()
+
+	outStr := trim(out.String() + trim(stdErr.String()))
+
+	return outStr, err
 }
 
 func registerExitHandler() {
@@ -284,7 +354,7 @@ func restartApp(configPath string, testMode bool) {
 						cfg.Args[i] = strings.ReplaceAll(cfg.Args[i], "$cmd", cfg.Cmd)
 					}
 
-					logInfo(tabs+"executing '"+cfg.Shell+" "+strings.Join(cfg.Args, " ")+"'\n", false)
+					logInfo(tabs+"executing '"+cfg.Shell+" "+strings.Join(cfg.Args, " ")+"'...\n", false)
 
 					childProcess = exec.Command(cfg.Shell, cfg.Args...)
 
